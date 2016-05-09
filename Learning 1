@@ -1,0 +1,15 @@
+# -*- coding utf-8 -*-
+
+import urllib
+
+url="http://www.163.com/"
+
+html=urllib.urlopen(url)
+
+# print html.read() 
+
+# print html.getcode() 
+
+print html.geturl()
+
+urllib.urlretrieve(url,"html\\abc.txt")
