@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""Made by Viki Qiu during 2016/5/7-2016/5/11"""
+"""Made by Viki Qiu during 2016/5/7-2016/5/11"""new
 
 import urllib2 # 使用header
 import re # 正则
