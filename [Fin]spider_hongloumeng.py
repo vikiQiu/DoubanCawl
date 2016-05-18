@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""Made by Viki Qiu during 2016/5/7-2016/5/11"""new
-
+"""Made by Viki Qiu during 2016/5/7-2016/5/11"""
 import urllib2 # 使用header
 import re # 正则
 import time # 延时
@@ -13,7 +12,7 @@ def get_page_urls(str,a,b):
     如: https://book.douban.com/subject/1007305/reviews?score=&amp;start=25
     @str: "https://book.douban.com/subject/1007305/reviews?score=&amp;start="
     @n: 总共的页数
-    2016/5/10 23:36 整理完毕
+    2016/5/10 23:36 
     """
     page_urls=[]
     for i in range(a,b):
@@ -26,7 +25,7 @@ def get_content(url):
     输入一个url字符串，输出对应的html内容
     @url: 要爬的一个链接
     尚未解决：1、多个agent2、cookies设置3、多个ip轮换
-    2016/5/10 22:58 整理完毕
+    2016/5/10 22:58 
     """
 
     req=urllib2.Request(url)
@@ -46,7 +45,7 @@ def get_first_info(html):
     获得该总页信息：
     return 标题、链接、姓名、时间 均为字符串，总返回一个tuple
     @html:某个总页url的html内容，由get_content返回
-    2016/5/10 23：09 整理完毕
+    2016/5/11 10：09 
     """
     regex_url=r'href="(.+?)" class="j a_unfolder"'
     pat = re.compile(regex_url)
@@ -68,8 +67,8 @@ def get_all_info(urls):
     """
     输入url数组，获得urls中每个url的总页信息，其中每个url为总页url
     @urls:为page_urls获得的数组，每个url为一个总页
-    @return：urls,titles,names,stars,times 均为数组
-    2016/5/10 23:44 整理完毕
+    @return：titles,names,times,comment_urls 均为数组
+    2016/5/11 10:33 
     """
     comment_urls=[]
     titles=[]
@@ -92,27 +91,30 @@ def get_all_info(urls):
 def get_sep_info(urls):
     """
     输入一个url数组，获得每一个url的分页信息，其中每个url为分页url
-    return stars,respons,goods,totals,comments 均为数组，组成tuple
-    2016/5/10 23:57 整理完毕
+    return stars,respons,goods,bads,comments 均为数组，组成tuple
+    2016/5/10 11:57 
     """
     print "get_sep_info"
-    stars=[];goods=[];totals=[];comments=[];i=0;respons=[]
+    stars=[];goods=[];bads=[];comments=[];i=0;respons=[]
     for url in urls:
         print url,i
-        good="NA";total="NA";comment="NA";star="NA";respon="NA"
+        good="NA";bad="NA";comment="NA";star="NA";respon="NA"
         html=get_content(url)
+        # f=open("../info/html.txt",'w')
+        # f.write(html)
+        # f.close()
         regex_star=r'<span title="(.+?)">'
         pat_star = re.compile(regex_star)
         regex_judge=r'<em id=(.+?)</em>'
         pat_judge=re.compile(regex_judge)
         regex_comment=r'<span property="v:description" class="">(.+?)<div class="clear"></div></span>'
         pat_comment=re.compile(regex_comment)
-        regex_respon=r'<div class="bd">(.)'
+        regex_respon=r'<(.+?) class="bd">'
         pat_respon=re.compile(regex_respon)
 
         star=re.findall(pat_star,html)
         if len(star)==0: 
-            stars="NA"
+            star="NA"
         else:
             star=star[0] # 转为字符型，防止ascii乱码
         try: # 防止页面错误跳到主页
@@ -121,25 +123,43 @@ def get_sep_info(urls):
             print "NO PAGE"
             stars.append(star)
             goods.append(good)
-            totals.append(total)
+            bads.append(bad)
             respons.append(respon)
             comments.append(comment)
             continue
-        total=re.findall(pat_judge,html)[1].split(">")[1]
+        bad=re.findall(pat_judge,html)[1].split(">")[1]
         if good=="":good="NA"
-        if total=="":total="NA"
+        if bad=="":bad="NA"
         stars.append(star)
         goods.append(good)
-        totals.append(total)
+        bads.append(bad)
         comment=re.findall(pat_comment,html)[0]
         comment=comment.decode('utf-8','ignore').encode('utf-8').strip()
         comments.append(comment)
-        respon=str(len(re.findall(pat_respon,html)))
+
+        """response deal"""
+        respon=re.findall(pat_respon,html)
+        respon=str(len(re.findall(pat_respon,html))-1)
+        if respon=='100':
+            print 'many page'
+            regex_respon_page=r'<a href="?start=(.+?)#comments" >'
+            pat_respon_page=re.compile(regex_respon_page)
+            respon_page=re.findall(re.compile(r'<a href=".start=(.+?)#comments" >'),html)
+            # respon_page=respon_page[-2]
+            # print html
+            print len(respon_page)
+            url_page='%s?start=%s#comments'%(url,respon_page[-2])
+            # print url_page
+            html_page=get_content(url_page)
+            respon=len(re.findall(re.compile(r'<(.+?) class="bd">'),html_page))
+            respon=str(int(respon_page[-2])+respon-1)
+            print respon_page[-2]
+        print ('respon is %s'%respon)
         respons.append(respon)
         i+=1
         if i%5==0:time.sleep(4) # 设置沉睡时间，控制在1min40个页面以内
-        # print star[0],respons[0],good[0],total[0],comments[0]
-    return stars,respons,goods,totals,comments
+        # print star[0],respons[0],good[0],bad[0],comments[0]
+    return stars,respons,goods,bads,comments
 
 def get_info(pattern,a,b):
     """
@@ -147,9 +167,9 @@ def get_info(pattern,a,b):
     @pattern: 总页url模式
     @a: 起始页页数
     @b: 终止页页数
-    2016/5/11 00:02 整理完毕
+    2016/5/11 12:02 
     """
-    # 获得总页url数组
+    # 获得总页url数组`
     page_urls = get_page_urls(pattern,a,b)
     print "page_urls OK"
 
@@ -160,15 +180,32 @@ def get_info(pattern,a,b):
     sep_info=get_sep_info(urls)
     print "sep_info OK"
 
-    # 输出
-    filename="../info/hong%d_%d.txt"%(a,b)
-    f=open(filename,'w')
+    # # 输出
+    # filename="../info2/hong%d_%d.txt"%(a,b)
+    # print ('开始写入%s'%filename)
+    # f=open(filename,'w')
+    # for i in range(0,len(info[0])):
+    #     for j in range(0,len(info)):
+    #         info[j][i]=info[j][i].replace("\t","")
+    #         f.write('%s\t'%info[j][i])
+    #     for j in range(0,len(sep_info)):
+    #         # print sep_info[j][i]
+    #         sep_info[j][i]=sep_info[j][i].replace("\t","")
+    #         f.write('%s'%sep_info[j][i])
+    #         if j!=(len(sep_info)-1):f.write('\t')
+    #     print i
+    #     f.write('\n')
+    # f.close()
+
+    # print ('%s写入完毕，开始写总文档'%filename)
+
+    f=open("../info2/hong_all.txt",'a')
     for i in range(0,len(info[0])):
         for j in range(0,len(info)):
             info[j][i]=info[j][i].replace("\t","")
             f.write('%s\t'%info[j][i])
         for j in range(0,len(sep_info)):
-            print sep_info[j][i]
+            # print sep_info[j][i]
             sep_info[j][i]=sep_info[j][i].replace("\t","")
             f.write('%s'%sep_info[j][i])
             if j!=(len(sep_info)-1):f.write('\t')
@@ -180,14 +217,26 @@ def get_info(pattern,a,b):
 
 
 pattern="https://book.douban.com/subject/1007305/reviews?score=&amp;start="
-get_info(pattern,4,5)
-# for i in range(2,6):
-#     get_info(pattern,i*10,(i+1)*10)
-#     print i*10,(i+1)*10
-#     time.sleep(61) #沉睡1分钟以上
+# get_info(pattern,0,1)
+# get_info(pattern,1,2)
+for i in range(14,16):
+    get_info(pattern,i*4,(i+1)*4)
+    print '已完成的页数'
+    print i*4,(i+1)*4
+    time.sleep(31) #沉睡 但抓到1000个左右仍然被禁了
 
-# get_info(pattern,2,4) 
+print '全部完成'
 
 # 不存在该页面
 # get_sep_info(["https://book.douban.com/review/4970960/"])
+# get_sep_info(['https://book.douban.com/review/1967305/'])
+# &#39; 变为 ‘
+
+"""
+注：
+1、下次可尝试BeautifulSuop和Xpath来解析html语句
+2、response处理方法太过复杂，可尝试用Xpath按块抓取
+3、下次可尝试多ip轮换、更换服务器、改写cookie等方法来改善被禁问题
+"""
+
 
